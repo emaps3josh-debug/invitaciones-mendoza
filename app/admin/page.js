@@ -4,7 +4,18 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { collection, deleteDoc, doc, onSnapshot, orderBy, query, updateDoc } from "firebase/firestore";
 import { auth, db } from "../../lib/firebase";
-import { ESTADOS, ETIQUETAS, waLink } from "../../lib/campos";
+import { ESTADOS, ETIQUETAS, FUNCIONES, llaveDetalle, waLink } from "../../lib/campos";
+
+function FondoAnimado() {
+  return (
+    <div className="bg" aria-hidden="true">
+      <div className="blob b1" />
+      <div className="blob b2" />
+      <div className="blob b3" />
+      <div className="brillos" />
+    </div>
+  );
+}
 
 const fechaBonita = (iso) => {
   if (!iso) return "Sin fecha";
@@ -28,6 +39,7 @@ function Login() {
   };
   return (
     <main className="wrap" style={{ maxWidth: 420 }}>
+      <FondoAnimado />
       <div className="hero">
         <p className="brand">MENDOZA INVITACIONES</p>
         <h1>Panel de fichas</h1>
@@ -39,8 +51,7 @@ function Login() {
         </div>
         <div className="field">
           <label>Contraseña</label>
-          <input type="password" autoComplete="current-password" value={pass} onChange={(e) => setPass(e.target.value)}
-            style={{ width: "100%", font: "inherit", fontSize: 16, border: "1px solid var(--line)", borderRadius: 10, padding: "11px 12px" }} />
+          <input type="password" autoComplete="current-password" value={pass} onChange={(e) => setPass(e.target.value)} />
         </div>
         {err && <div className="alert err">{err}</div>}
         <button className="btn primary" type="submit">Entrar</button>
@@ -61,20 +72,24 @@ function Detalle({ ficha, volver }) {
     volver();
   };
 
+  const det = ficha.detalles || {};
   const filas = (sec) =>
     Object.entries(sec.campos)
-      .map(([k, etiqueta]) => [etiqueta, ficha[sec.clave]?.[k]])
-      .filter(([, v]) => v && String(v).trim());
+      .map(([k, etiqueta]) => [etiqueta, ficha[sec.clave]?.[k], det[llaveDetalle(sec.clave, k)]])
+      .filter(([, v, d]) => (v && String(v).trim()) || d);
 
-  const funciones = [...(ficha.funciones || []), ...(ficha.funcionOtra ? [`Otra: ${ficha.funcionOtra}`] : [])];
+  // Funciones marcadas con sus detalles
+  const funciones = (ficha.funciones || []).map((fn) => [fn, det[llaveDetalle("funciones", FUNCIONES.indexOf(fn))]]);
+  if (ficha.funcionOtra) funciones.push([`Otra: ${ficha.funcionOtra}`, ""]);
 
   return (
     <main className="wrap detail">
+      <FondoAnimado />
       <div className="admin-top no-print">
         <button className="btn ghost" onClick={volver}>← Volver</button>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button className="btn ghost" onClick={() => window.print()}>Imprimir / PDF</button>
-          <button className="btn ghost" onClick={borrar} style={{ color: "var(--err)" }}>Borrar</button>
+          <button className="btn ghost" onClick={borrar} style={{ color: "#ffb4ad" }}>Borrar</button>
         </div>
       </div>
 
@@ -106,10 +121,13 @@ function Detalle({ ficha, volver }) {
           <section className="section" key={sec.clave}>
             <h2>{sec.titulo}</h2>
             <dl>
-              {f.map(([k, v]) => (
+              {f.map(([k, v, d]) => (
                 <div key={k} style={{ display: "contents" }}>
                   <dt>{k}</dt>
-                  <dd>{String(v).startsWith("http") ? <a href={v} target="_blank" rel="noreferrer">{v}</a> : v}</dd>
+                  <dd>
+                    {v ? (String(v).startsWith("http") ? <a href={v} target="_blank" rel="noreferrer">{v}</a> : v) : "—"}
+                    {d && <span className="extra">➕ {d}</span>}
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -121,8 +139,20 @@ function Detalle({ ficha, volver }) {
         <section className="section">
           <h2>3. Funciones interactivas</h2>
           <ul style={{ margin: 0, paddingLeft: 20 }}>
-            {funciones.map((x) => <li key={x}>{x}</li>)}
+            {funciones.map(([fn, d]) => (
+              <li key={fn} style={{ marginBottom: 4 }}>
+                {fn}
+                {d && <span className="extra">➕ {d}</span>}
+              </li>
+            ))}
           </ul>
+        </section>
+      )}
+
+      {ficha.comentarios?.trim() && (
+        <section className="section">
+          <h2>Comentarios finales</h2>
+          <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{ficha.comentarios}</p>
         </section>
       )}
 
@@ -156,6 +186,7 @@ export default function Admin() {
 
   return (
     <main className="wrap">
+      <FondoAnimado />
       <div className="admin-top">
         <h1>Fichas recibidas</h1>
         <button className="btn ghost" onClick={() => signOut(auth)}>Salir</button>
