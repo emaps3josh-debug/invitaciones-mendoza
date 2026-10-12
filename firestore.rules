@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /fichas/{id} {
+      // Cualquier cliente puede ENVIAR una ficha nueva (no leer ni modificar)
+      allow create: if request.resource.data.contacto.nombre is string
+                    && request.resource.data.contacto.whatsapp is string
+                    && request.resource.data.estado == "nueva";
+      // Solo tú (con sesión iniciada) puedes ver, actualizar y borrar
+      allow read, update, delete: if request.auth != null;
+    }
+  }
+}
